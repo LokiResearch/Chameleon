@@ -34,6 +34,8 @@ typedef struct _screenshot {
 // Functions
 void initialize();
 bool installFileOpenHook();
+bool requestScreenCapturePermission();
+bool requestAccessibilityPermission();
 void updateOpenedWindows();
 screenshot captureScreenshot(windowId windowId);
 void clearCapturedScreenshotMemory(screenshot scrnsht);

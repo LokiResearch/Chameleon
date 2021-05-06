@@ -86,6 +86,29 @@ static void* opensnoop_thread(void* args) {
     return NULL;
 }
 
+bool requestScreenCapturePermission() {
+    bool screenRecordingEnabled = false;
+    // Since Catalina, we also need the Screen Capture permissions to loop through open windows (and capture them)
+    if (CGRequestScreenCaptureAccess != NULL) {
+        CGRequestScreenCaptureAccess();
+        screenRecordingEnabled = CGPreflightScreenCaptureAccess();
+    } else {
+        // Backward compatibility
+        // If the API is unavailable, we make sure we can take screenshots (should force the prompt for granting permissions on newer systems)
+        CGImageRef screenshot = CGWindowListCreateImage(
+            CGRectMake(0, 0, 1, 1),
+            kCGWindowListOptionOnScreenOnly,
+            kCGNullWindowID,
+            kCGWindowImageDefault);
+
+        if (screenshot != NULL) {
+            screenRecordingEnabled = true;
+            CFRelease(screenshot);
+        }
+    }
+    return screenRecordingEnabled;
+}
+
 void initialize() {
     eventTap = CGEventTapCreate(kCGAnnotatedSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly, kCGEventMaskForAllEvents, eventsCallback, 0);
     Q_ASSERT_X(eventTap != NULL, "Event Tap", "Could not create the event tap");

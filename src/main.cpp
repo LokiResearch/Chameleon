@@ -23,6 +23,7 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #include <QtGlobal>
 #include "os_specific/window.h"
 #include <QDebug>
+#include <QMessageBox>
 #include <QDir>
 #include <QStandardPaths>
 
@@ -97,6 +98,14 @@ int main(int argc, char *argv[])
     a.setApplicationName("Chameleon");
 
     a.setQuitOnLastWindowClosed(false);
+
+    bool screenCapture = requestScreenCapturePermission();
+    bool accessibility = requestAccessibilityPermission();
+
+    if (!screenCapture || !accessibility) {
+        QMessageBox::warning(NULL, "Chameleon needs permissions", "Chameleon requires access to Accessibility and Screen Capture.\nPlease make sure Chameleon has access to both in System Preferences > Security & Privacy > Privacy.\n\nPressing 'OK' will exit the application.");
+        return 1;
+    }
 
     if (!installFileOpenHook()) {
         return 1;
