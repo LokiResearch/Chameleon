@@ -20,10 +20,10 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #include <QDebug>
 #include <iostream>
 #include <pthread.h>
+#include "accessibility.h"
 #include <AppKit/AppKit.h>
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
-#include "accessibility.h"
 
 
 #define DTRACE_PRGRM "\n\
@@ -87,7 +87,8 @@ static void* opensnoop_thread(void* args) {
 }
 
 void initialize() {
-    eventTap = CGEventTapCreate(kCGAnnotatedSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionDefault, kCGEventMaskForAllEvents, eventsCallback, 0);
+    eventTap = CGEventTapCreate(kCGAnnotatedSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly, kCGEventMaskForAllEvents, eventsCallback, 0);
+    Q_ASSERT_X(eventTap != NULL, "Event Tap", "Could not create the event tap");
     CFRunLoopSourceRef runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0);
     CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
     CGEventTapEnable(eventTap, true);
@@ -155,6 +156,7 @@ cv::Rect cg2cv(CGRect rect) {
 bool isWindowRectHidden(windowId wid,int x, int y, int width, int height) {
     NSArray *windows = (NSArray *)CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenAboveWindow, wid);
 
+    bool res = false;
     for (NSDictionary *window in windows) {
         NSInteger windowLayer = [[window objectForKey:(id)kCGWindowLayer] integerValue];
         if (windowLayer < kCGScreenSaverWindowLevelKey) {
@@ -165,13 +167,14 @@ bool isWindowRectHidden(windowId wid,int x, int y, int width, int height) {
             cv::Rect rect(x, y, width, height);
 
             if ((rect & wndRect).area() > 0) {
-                return true;
+                res = true;
+                break;
             }
         }
     }
 
     CFRelease(windows);
-    return false;
+    return res;
 }
 
 
@@ -218,6 +221,7 @@ void setActivationEnabled(bool activation) {
 bool isWindowPartHidden(windowId wid,int x, int y, int width, int height) {
     NSArray *windows = (NSArray *)CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenAboveWindow, wid);
 
+    bool res = false;
     for (NSDictionary *window in windows) {
         NSInteger windowLayer = [[window objectForKey:(id)kCGWindowLayer] integerValue];
         if (windowLayer < kCGScreenSaverWindowLevelKey) {
@@ -228,12 +232,14 @@ bool isWindowPartHidden(windowId wid,int x, int y, int width, int height) {
             cv::Rect rect(x, y, width, height);
 
             if ((rect & wndRect).area() > 0) {
-                return true;
+                res = true;
+                break;
             }
         }
     }
 
-    return false;
+    CFRelease(windows);
+    return res;
 }
 
 
