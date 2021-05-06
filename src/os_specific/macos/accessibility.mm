@@ -21,6 +21,7 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
 #include <iostream>
+#include <set>
 #include "accessibility.h"
 
 extern "C" AXError _AXUIElementGetWindow(AXUIElementRef, CGWindowID* out);
@@ -266,33 +267,59 @@ for (int i = 0; i < count; ++i) { \
 
 
 void lookForOpenedFiles(processId pid) {
+    // AFAIK the only way to get the opened file from a window is through the accessibility API.
     AXUIElementRef application = AXUIElementCreateApplication(pid);
-
     CFArrayRef windows;
-    AXUIElementCopyAttributeValue(application, kAXChildrenAttribute, (CFTypeRef*) &windows);
-    if (windows == NULL) return;
+    AXUIElementCopyAttributeValue(application, kAXWindowsAttribute, (CFTypeRef*) &windows);
 
-
-    FOR_EACH(window, windows, {
-        if (isElementKindOf(window, kAXWindowRole)) {
+    if (windows != NULL) {
+        FOR_EACH(window, windows, {
             std::string document = getDocumentFromWindow(window);
             if (!document.empty()) {
                 onFileOpened(document.c_str(), pid);
             }
-        }
-     });
+         });
+
+        CFRelease(windows);
+    }
+
+    CFRelease(application);
+}
+
+static void* lookForOpenedFilesThread(void*) {
+    // Some explanations here:
+    // On macOS, a window can be "linked" to a file and this information can be accessed through the Accessibility API
+    // While not all application support it, this has the advantage of not requiring root permissions and also allows us to scan for files opened *before* Chameleon was started.
+    // So this method can work in addition to dtrace, or as an alternative for those not wanting to enable dtrace/give root permission.
+    // Now, AFAIK, the Accessibility API is the only way to get the document linked to a window.
+    // This part is implemented in lookForOpenedFiles(pid) which will use the Accessibility API to scan a process, find windows and find the documents.
+    // However, I noticed that lookForOpenedFiles(pid) can be extremely expensive, especially on newer versions of MacOS in which accessibility requests can be quite slow
+    // So my first naive implementation enumerating all processes (using GetNextProcess) and then calling lookForOpenedFiles(pid) on all of them was extremely slow.
+    // Instead, I now reduce the number of calls to lookForOpenedFiles(pid) by first filtering processes to keep only those with at least one window.
+    // I do so using CGWindowListCopyWindowInfo which returns the list of opened windows, and then get the process id that the window belongs to
+    // Still a little costly, but I am not aware of any faster alternative
+
+    NSArray *windows = (NSArray *)CGWindowListCopyWindowInfo(kCGWindowListOptionAll | kCGWindowListExcludeDesktopElements, kCGNullWindowID);
+    // We store pids in a set to avoid duplicates
+    std::set<pid_t> pids;
+
+    for (NSDictionary *cocoaWindow in windows) {
+        pid_t windowPid = [[cocoaWindow objectForKey:(id)kCGWindowOwnerPID] integerValue];
+        pids.insert(windowPid);
+    }
+
+    for (auto pid : pids) {
+        lookForOpenedFiles(pid);
+    }
 
     CFRelease(windows);
+
+    return NULL;
 }
 
 void lookForOpenedFiles() {
-    ProcessSerialNumber psn = { 0, kNoProcess };
-    while (noErr == GetNextProcess(&psn)) {
-        pid_t pid;
-        if (noErr == GetProcessPID(&psn, &pid)) {
-            lookForOpenedFiles(pid);
-        }
-    }
+    pthread_t output_thread;
+    pthread_create(&output_thread, NULL, lookForOpenedFilesThread, (void*) NULL);
 }
 
 void onDocumentScrolled() {
@@ -321,6 +348,19 @@ void onDocumentScrolled() {
         }
     }
     windowScrollAreasMutex.unlock();
+}
+
+bool requestAccessibilityPermission() {
+    bool accessibilityEnabled = false;
+
+    if (AXIsProcessTrustedWithOptions != NULL){
+        NSDictionary *options = @{(__bridge id)kAXTrustedCheckOptionPrompt: @YES};
+        accessibilityEnabled = AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)options);
+    } else{
+        accessibilityEnabled = AXIsProcessTrusted();
+    }
+
+   return accessibilityEnabled;
 }
 
 void accessibilityUpdateWindow(processId, windowId wid) {
