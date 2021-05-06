@@ -62,18 +62,6 @@ FORMS += \
         forms/mainwindow.ui \
     forms/registrationtooldialog.ui
 
-# OpenCV
-LIBS += -lopencv_core \
-        -lopencv_flann \
-        -lopencv_highgui \
-        -lopencv_imgproc \
-        -lopencv_calib3d \
-        -lopencv_features2d \
-        -lopencv_ml \
-        -lopencv_xfeatures2d \
-        -lopencv_tracking \
-        -lopencv_imgcodecs
-
 
 windows {
     message("Needs to be configured")
@@ -90,31 +78,34 @@ windows {
         -framework QuickLook \
         -framework Security
 
-    # = OpenCV4 using pkg-config
-    # Look for pkg-config in Fink, Macports and Homebrew (the last one we find wins)
+    # = Look for pkg-config in Fink, Macports and Homebrew (the last one we find wins)
     exists(/sw/bin/pkg-config) {
         QMAKE_PKG_CONFIG = /sw/bin/pkg-config
-        INCLUDEPATH += /sw/include
     }
     exists(/opt/local/bin/pkg-config) {
-            QMAKE_PKG_CONFIG = /opt/local/bin/pkg-CONFIG
-        INCLUDEPATH += /opt/local/include
+        QMAKE_PKG_CONFIG = /opt/local/bin/pkg-CONFIG
     }
     exists(/usr/local/bin/pkg-config) {
         QMAKE_PKG_CONFIG = /usr/local/bin/pkg-config
-        INCLUDEPATH += /usr/local/include
     }
 
-    message("Looking for dependencies using $$QMAKE_PKG_CONFIG")
-
+    # = Add OpenCV4 to path
     system($$QMAKE_PKG_CONFIG --exists opencv4) {
       QMAKE_CXXFLAGS += $$system("$$QMAKE_PKG_CONFIG --cflags opencv4")
-      LIBS += $$system("$$QMAKE_PKG_CONFIG --libs opencv4")
+      LIBS += $$system("$$QMAKE_PKG_CONFIG --libs-only-L opencv4")
       message("OpenCV4 found")
     }
 
 } else:linux-*  {
 }
+
+# OpenCV
+LIBS += -lopencv_core \
+        -lopencv_flann \
+        -lopencv_calib3d \
+        -lopencv_imgproc \
+        -lopencv_features2d \
+        -lopencv_xfeatures2d
 
 RESOURCES += \
     resources/resources.qrc
