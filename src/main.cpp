@@ -23,6 +23,8 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #include <QtGlobal>
 #include "os_specific/window.h"
 #include <QDebug>
+#include <QDir>
+#include <QStandardPaths>
 
 Database* database;
 ObservedWindowsManager* windowManager;
@@ -32,6 +34,7 @@ void onFileOpened(const char* filePath, processId id) {
     QList<Figure*> figures = database->getFiguresOfFile(filePath);
 
     if (!figures.isEmpty()) {
+        qDebug() << "New file found";
         filesManager->addObservedFile(filePath);
         emit windowManager->newFiguresDetected(id, figures);
     }
@@ -53,30 +56,41 @@ void onMouseMoved(int x, int y) {
     windowManager->dispatchMouseMovedEvent(x, y);
 }
 
+std::chrono::steady_clock::time_point startTime;
+
 void customMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
-    QByteArray localMsg = msg.toLocal8Bit();
-    switch (type) {
-    case QtDebugMsg:
-        fprintf(stderr, "%s [%s:%u]\n", localMsg.constData(), context.file, context.line);
-        break;
-    case QtInfoMsg:
-        fprintf(stderr, "Info: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtWarningMsg:
-        fprintf(stderr, "/!\\: %s\n", localMsg.constData());
-        break;
-    case QtCriticalMsg:
-        fprintf(stderr, "Critical: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtFatalMsg:
-        fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        abort();
+    QString logFileLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(logFileLocation);
+
+    FILE* output = fopen((logFileLocation+"/log.txt").toStdString().c_str(), "a+");
+    int timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
+    if (output != NULL) {
+        //output = stderr;
+        QByteArray localMsg = msg.toLocal8Bit();
+        switch (type) {
+        case QtDebugMsg:
+            fprintf(output, "[%d] %s [%s:%u]\n", timestamp, localMsg.constData(), context.file, context.line);
+            break;
+        case QtInfoMsg:
+            fprintf(output, "[%d] Info: %s (%s:%u, %s)\n", timestamp, localMsg.constData(), context.file, context.line, context.function);
+            break;
+        case QtWarningMsg:
+            fprintf(output, "[%d] /!\\: %s\n", timestamp, localMsg.constData());
+            break;
+        case QtCriticalMsg:
+            fprintf(output, "[%d] Critical: %s (%s:%u, %s)\n", timestamp, localMsg.constData(), context.file, context.line, context.function);
+            break;
+        case QtFatalMsg:
+            fprintf(output, "[%d] Fatal: %s (%s:%u, %s)\n", timestamp, localMsg.constData(), context.file, context.line, context.function);
+            abort();
+        }
+        fclose(output);
     }
 }
-
 int main(int argc, char *argv[])
 {
+    startTime = std::chrono::steady_clock::now();
     qInstallMessageHandler(customMessageOutput);
     QApplication a(argc, argv);
     a.setOrganizationDomain("Loki");
@@ -89,15 +103,14 @@ int main(int argc, char *argv[])
     }
 
     initialize();
-
+    qDebug() << "Load database";
     database = new Database();
     windowManager = new ObservedWindowsManager;
     filesManager = new ObservedFilesManager(database);
     MainWindow w(database, windowManager, filesManager);
-
+    qDebug() << "Look for opened files";
     lookForOpenedFiles();
-
     setActivationEnabled(false);
-
+    qDebug() << "Run the app";
     return a.exec();
 }
