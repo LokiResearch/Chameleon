@@ -58,6 +58,7 @@ AugmentedView::AugmentedView(Figure* referenceFigure, ObservedWindow* window) :
     btn->setMenu(menu);
     isHidden = false;
     isFloating = false;
+    found = false;
 
     connect(this, SIGNAL(figureFound(QRect)), this, SLOT(onFigureFound(QRect)), Qt::QueuedConnection);
     connect(this, SIGNAL(figureNotFound()), this, SLOT(onFigureNotFound()), Qt::QueuedConnection);
