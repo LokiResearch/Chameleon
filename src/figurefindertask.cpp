@@ -44,22 +44,26 @@ bool FigureFinderTask::getFigureRect(Figure* figure, std::vector<KeyPoint>& scen
     featureMatchingAlgorithm->setNbAssociationMax(Model::getInstance()->nbAssociationsMax.getValue());
 
     std::vector<DMatch> matches = featureMatchingAlgorithm->match(figure->getDescriptors(), sceneDescriptors);
-    Rect rect = featureMatchingAlgorithm->computeObjectRect(figure->getWidth(), figure->getHeight(), matches, figure->getKeypoints(), sceneKeypoints);
+    if (matches.size() >= 3) { // Need at least 3 matches to compute the figure's rectangle.
+        Rect rect = featureMatchingAlgorithm->computeObjectRect(figure->getWidth(), figure->getHeight(), matches, figure->getKeypoints(), sceneKeypoints);
 
-    double aspectRatioA = ((double) figure->getWidth()) / figure->getHeight();
-    double aspectRatioB = ((double) rect.width) / rect.height;
-    bool aspectRatioCorrect = qAbs((1 - (aspectRatioA / aspectRatioB))) <= 0.1;
+        double aspectRatioA = ((double) figure->getWidth()) / figure->getHeight();
+        double aspectRatioB = ((double) rect.width) / rect.height;
+        bool aspectRatioCorrect = qAbs((1 - (aspectRatioA / aspectRatioB))) <= 0.1;
 
-    if (rect.width > 10 && rect.height > 10 && aspectRatioCorrect) {
-        figureRect->x = observedWindow->getX() + rect.x;
-        figureRect->y = observedWindow->getY() + rect.y;
-        figureRect->width = rect.width;
-        figureRect->height = rect.height;
-        *reason = 0;
-        return true;
+        if (rect.width > 10 && rect.height > 10 && aspectRatioCorrect) {
+            figureRect->x = observedWindow->getX() + rect.x;
+            figureRect->y = observedWindow->getY() + rect.y;
+            figureRect->width = rect.width;
+            figureRect->height = rect.height;
+            *reason = 0;
+            return true;
+        }
+
+        *reason = 3;
     }
+    *reason = 4;
 
-    *reason = 3;
     return false;
 }
 
