@@ -51,7 +51,13 @@ void ObservedWindowsManager::onRefreshTimer() {
     bool observedWindowVisible = false;
     for (auto observedWindow : observedWindows) {
         if (observedWindow->getAugmentedViews().size() > 0) {
-            if (observedWindow->isVisible() || strlen(observedWindow->getTitle()) > 0) {
+            bool shouldBeAnalyzed = (observedWindow->isVisible() || strlen(observedWindow->getTitle()) > 0);
+
+            if (Model::getInstance()->onlyAnalyzeActiveWindow.getValue()) {
+                shouldBeAnalyzed = observedWindow->isFrontMost();
+            }
+
+            if (shouldBeAnalyzed) {
                 observedWindowVisible = true;
                 FigureFinderTask* finderTask = new FigureFinderTask(observedWindow);
                 threadPool->start(finderTask);
@@ -87,7 +93,7 @@ void ObservedWindowsManager::addFigureToWindow(ObservedWindow* wnd, Figure* figu
     }
 }
 
-void ObservedWindowsManager::onWindowUpdated(windowId wid, processId pid, int x, int y, int width, int height, bool isOnScreen, const char* title) {
+void ObservedWindowsManager::onWindowUpdated(windowId wid, processId pid, int x, int y, int width, int height, bool isOnScreen, const char* title, bool isFrontMost) {
     observedWindowsMutex.lock();
 
     QMutableListIterator<ObservedWindow*> i(observedWindowsTrashCan);
@@ -125,6 +131,7 @@ void ObservedWindowsManager::onWindowUpdated(windowId wid, processId pid, int x,
     wnd->setHeight(height);
     wnd->setOnScreen(isOnScreen);
     wnd->setTitle(title);
+    wnd->setFrontMost(isFrontMost);
 
     observedWindowsMutex.unlock();
 }

@@ -50,6 +50,7 @@ public:
     inline QMutex& getAnalysisMutex() {return analysis;}
     inline QMutex& getAugmentedViewsMutex() {return augmentedViewsMutex;}
     inline bool isOnScreen() {return onScreen;}
+    inline bool isFrontMost() {return frontMost;}
     inline const char* getTitle() {return title;}
     inline qint64 getMSecsSinceScroll() {return QDateTime::currentMSecsSinceEpoch() - lastScrollTime;}
     inline double getHScrollPos() {return lastHorizontalScrollPos;}
@@ -60,6 +61,7 @@ public:
     inline void setWidth(int newWidth) {width = newWidth;}
     inline void setHeight(int newHeight) {height = newHeight;}
     inline void setOnScreen(bool onScreen) {this->onScreen = onScreen;}
+    inline void setFrontMost(bool frontMost) {this->frontMost = frontMost;}
     inline void setTitle(const char* title) {if (title != NULL) strncpy(this->title, title, sizeof(this->title) - 1);}
 
 private:
@@ -67,6 +69,7 @@ private:
     bool hasScreenshot;
     bool lastVisible;
     bool visible;
+    bool frontMost;
     double hasScrollPos;
     double lastVerticalScrollPos;
     double lastHorizontalScrollPos;

@@ -31,6 +31,7 @@ ObservedWindow::ObservedWindow(processId pid, windowId wid) :
     visible = false;
     hasScrollPos = false;
     lastScrollTime = 0;
+    frontMost = false;
 }
 
 // Add a new figure to look for in the window

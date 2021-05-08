@@ -50,7 +50,7 @@ bool isWindowPartHidden(windowId wid, int x, int y, int width, int height);
 
 // Callbacks
 void onFileOpened(const char* filePath, processId id);
-void onWindowUpdated(windowId wid, processId pid, int x, int y, int width, int height, bool isOnScreen, const char* title);
+void onWindowUpdated(windowId wid, processId pid, int x, int y, int width, int height, bool isOnScreen, const char* title, bool isFrontMost);
 void onWindowScrolled(windowId wid, int x, int y, int width, int height, double horizontalPos, double verticalPos);
 void onWindowDestroyed(windowId id);
 void onMouseMoved(int x, int y);

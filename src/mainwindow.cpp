@@ -178,3 +178,8 @@ void MainWindow::on_databaseListWidget_currentItemChanged(QListWidgetItem *curre
 void MainWindow::on_accessibilityCheckbox_stateChanged(int val){
     Model::getInstance()->useAccessibility.setValue(val);
 }
+
+void MainWindow::on_onlyActiveWndCheckbox_stateChanged(int val)
+{
+    Model::getInstance()->onlyAnalyzeActiveWindow.setValue(val);
+}

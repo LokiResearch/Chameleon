@@ -142,10 +142,22 @@ bool installFileOpenHook() {
 
 QSet<windowId> openedWindows;
 void updateOpenedWindows() {
+    NSWorkspace* workspace = [NSWorkspace sharedWorkspace];
+    NSArray<NSRunningApplication *>* apps = [workspace runningApplications];
+
+    NSString* activeApp;
+
+    for (NSRunningApplication* app in apps) {
+        if ([app isActive]) {
+            activeApp = [app localizedName];
+        }
+    }
+
     NSArray *windows = (NSArray *)CGWindowListCopyWindowInfo(kCGWindowListOptionAll | kCGWindowListExcludeDesktopElements, kCGNullWindowID);
 
     QSet<windowId> closedWindows(openedWindows);
     openedWindows.clear();
+    bool foundFocused = false;
 
     for (NSDictionary *cocoaWindow in windows) {
         CGRect windowBounds;
@@ -153,11 +165,19 @@ void updateOpenedWindows() {
         windowId windowNumber = [[cocoaWindow objectForKey:(id)kCGWindowNumber] integerValue];
         processId windowPid = [[cocoaWindow objectForKey:(id)kCGWindowOwnerPID] integerValue];
         bool isOnScreen = [[cocoaWindow objectForKey:(id)kCGWindowIsOnscreen] boolValue];
+        NSString* ownerName = [cocoaWindow objectForKey:(id)kCGWindowOwnerName];
 
         const char* windowTitle = [(__bridge NSString *)[cocoaWindow objectForKey:(id)kCGWindowName] UTF8String];
+        bool isFrontMost = false;
+
+        if (!foundFocused && isOnScreen && [ownerName isEqualToString:activeApp]) {
+            isFrontMost = true;
+            foundFocused = true;
+        }
+
         CGRectMakeWithDictionaryRepresentation((CFDictionaryRef) [cocoaWindow objectForKey:(id)kCGWindowBounds], &windowBounds);
 
-        onWindowUpdated(windowNumber, windowPid, windowBounds.origin.x, windowBounds.origin.y, windowBounds.size.width, windowBounds.size.height, isOnScreen, windowTitle);
+        onWindowUpdated(windowNumber, windowPid, windowBounds.origin.x, windowBounds.origin.y, windowBounds.size.width, windowBounds.size.height, isOnScreen, windowTitle, isFrontMost);
         accessibilityUpdateWindow(windowNumber, windowPid);
 
         openedWindows.insert(windowNumber);

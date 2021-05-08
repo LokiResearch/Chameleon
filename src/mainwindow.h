@@ -60,6 +60,8 @@ private slots:
 
     void on_accessibilityCheckbox_stateChanged(int arg1);
 
+    void on_onlyActiveWndCheckbox_stateChanged(int arg1);
+
 private:
     bool event(QEvent *event);
 

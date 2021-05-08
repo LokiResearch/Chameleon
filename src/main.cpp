@@ -45,8 +45,8 @@ void onWindowDestroyed(windowId id) {
     windowManager->onWindowDestroyed(id);
 }
 
-void onWindowUpdated(windowId wid, processId pid, int x, int y, int width, int height, bool isOnScreen, const char* title) {
-    windowManager->onWindowUpdated(wid, pid, x, y, width, height, isOnScreen, title);
+void onWindowUpdated(windowId wid, processId pid, int x, int y, int width, int height, bool isOnScreen, const char* title, bool isFrontMost) {
+    windowManager->onWindowUpdated(wid, pid, x, y, width, height, isOnScreen, title, isFrontMost);
 }
 
 void onWindowScrolled(windowId wid, int x, int y, int width, int height, double horizontalPos, double verticalPos) {

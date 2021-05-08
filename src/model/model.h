@@ -34,7 +34,8 @@ private:
       nbAssociationsMax(1000),
       showInfoButton(true),
       redirectAugmentedView(false),
-      useAccessibility(true)
+      useAccessibility(true),
+      onlyAnalyzeActiveWindow(true)
     {}
 
 public:
@@ -53,6 +54,7 @@ public:
     Observable<bool> showInfoButton;
     Observable<bool> redirectAugmentedView;
     Observable<bool> useAccessibility;
+    Observable<bool> onlyAnalyzeActiveWindow;
 };
 
 #endif // MODEL_H

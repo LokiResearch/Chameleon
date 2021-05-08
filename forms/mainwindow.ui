@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="configurationTab">
        <attribute name="title">
@@ -33,27 +33,10 @@
           <property name="sizeConstraint">
            <enum>QLayout::SetDefaultConstraint</enum>
           </property>
-          <item row="5" column="0">
-           <widget class="QLabel" name="nbAssociationsLabel">
-            <property name="text">
-             <string>Nb associations max</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QCheckBox" name="infoButtonCheckBox">
-            <property name="text">
-             <string>Show info button</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="2">
-           <widget class="QCheckBox" name="redirectCheckBox">
-            <property name="text">
-             <string>Redirect augmented views</string>
+          <item row="5" column="2">
+           <widget class="QSpinBox" name="nbAssociationsSpinBox">
+            <property name="maximum">
+             <number>99999</number>
             </property>
            </widget>
           </item>
@@ -64,13 +47,6 @@
             </property>
             <property name="alignment">
              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="2">
-           <widget class="QSpinBox" name="nbAssociationsSpinBox">
-            <property name="maximum">
-             <number>99999</number>
             </property>
            </widget>
           </item>
@@ -91,10 +67,10 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
-           <widget class="QSpinBox" name="refreshTimeSpinBox">
-            <property name="maximum">
-             <number>99999</number>
+          <item row="5" column="0">
+           <widget class="QLabel" name="nbAssociationsLabel">
+            <property name="text">
+             <string>Nb associations max</string>
             </property>
            </widget>
           </item>
@@ -102,6 +78,40 @@
            <widget class="QCheckBox" name="accessibilityCheckbox">
             <property name="text">
              <string>Use accessibiliy</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QSpinBox" name="refreshTimeSpinBox">
+            <property name="maximum">
+             <number>99999</number>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QCheckBox" name="infoButtonCheckBox">
+            <property name="text">
+             <string>Show info button</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="2">
+           <widget class="QCheckBox" name="redirectCheckBox">
+            <property name="text">
+             <string>Redirect augmented views</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="2">
+           <widget class="QCheckBox" name="onlyActiveWndCheckbox">
+            <property name="text">
+             <string>Only analyze active window</string>
             </property>
             <property name="checked">
              <bool>true</bool>
