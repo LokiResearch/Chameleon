@@ -35,7 +35,8 @@ private:
       showInfoButton(true),
       redirectAugmentedView(false),
       useAccessibility(true),
-      onlyAnalyzeActiveWindow(true)
+      onlyAnalyzeActiveWindow(true),
+      useDtrace(false)
     {}
 
 public:
@@ -55,6 +56,7 @@ public:
     Observable<bool> redirectAugmentedView;
     Observable<bool> useAccessibility;
     Observable<bool> onlyAnalyzeActiveWindow;
+    Observable<bool> useDtrace;
 };
 
 #endif // MODEL_H

@@ -183,3 +183,8 @@ void MainWindow::on_onlyActiveWndCheckbox_stateChanged(int val)
 {
     Model::getInstance()->onlyAnalyzeActiveWindow.setValue(val);
 }
+
+void MainWindow::on_dtraceCheckbox_stateChanged(int val)
+{
+    Model::getInstance()->useDtrace.setValue(val);
+}

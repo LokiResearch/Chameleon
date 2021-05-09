@@ -107,10 +107,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!installFileOpenHook()) {
-        return 1;
-    }
-
     initialize();
     qDebug() << "Load database";
     database = new Database();

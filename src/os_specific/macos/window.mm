@@ -48,8 +48,17 @@ syscall::open:return, syscall::open_nocancel:return, syscall::open_extended:retu
 CFMachPortRef eventTap;
 CGEventRef eventsCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon);
 
+
+volatile int opensnoopRunning = 1;
+
+void handler(int sig) {
+    opensnoopRunning = 0;
+}
+
 static void* opensnoop_thread(void* args) {
     FILE* pipe = (FILE*) args;
+
+    signal(SIGUSR1, handler);
 
     if (pipe) {
         int fd = fileno(pipe);
@@ -59,7 +68,7 @@ static void* opensnoop_thread(void* args) {
         FD_ZERO(&fds);
         FD_SET(fd, &fds);
 
-        while (true) {
+        while (opensnoopRunning) {
             QString str;
             select(fd + 1, &fds, NULL, NULL, NULL);
             char buf[1024];
@@ -117,6 +126,7 @@ void initialize() {
     CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
     CGEventTapEnable(eventTap, true);
 }
+pthread_t fileOpenHookThread;
 
 bool installFileOpenHook() {
     AuthorizationRef authref = 0;
@@ -135,10 +145,14 @@ bool installFileOpenHook() {
             return false;
     }
 
-    pthread_t output_thread;
-    pthread_create(&output_thread, NULL, opensnoop_thread, (void*) pipe);
+    pthread_create(&fileOpenHookThread, NULL, opensnoop_thread, (void*) pipe);
 
     return true;
+}
+
+void uninstallFileOpenHook() {
+    pthread_kill(fileOpenHookThread, SIGUSR1);
+    pthread_join(fileOpenHookThread, NULL);
 }
 
 QSet<windowId> openedWindows;

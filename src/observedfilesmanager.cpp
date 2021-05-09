@@ -26,6 +26,8 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #include <QMessageBox>
 #include <QCheckBox>
 #include "database.h"
+#include "model/model.h"
+#include "os_specific/window.h"
 
 ObservedFilesManager::ObservedFilesManager(Database* db):
     database(db) {
@@ -33,6 +35,14 @@ ObservedFilesManager::ObservedFilesManager(Database* db):
     this->connect(&checkTimer, &QTimer::timeout, this, &ObservedFilesManager::lookForModifiedFiles);
 
     checkTimer.start();
+
+    Model::getInstance()->useDtrace.addCallbackOnChange([=](bool& val) {
+        if (val) {
+            installFileOpenHook();
+        } else {
+            uninstallFileOpenHook();
+        }
+    });
 }
 
 
