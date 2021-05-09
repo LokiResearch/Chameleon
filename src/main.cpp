@@ -117,8 +117,6 @@ int main(int argc, char *argv[])
     windowManager = new ObservedWindowsManager;
     filesManager = new ObservedFilesManager(database);
     MainWindow w(database, windowManager, filesManager);
-    qDebug() << "Look for opened files";
-    lookForOpenedFiles();
     setActivationEnabled(false);
     qDebug() << "Run the app";
     return a.exec();

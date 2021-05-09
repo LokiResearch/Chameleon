@@ -22,6 +22,7 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #import <Carbon/Carbon.h>
 #include <iostream>
 #include <set>
+#include <QSet>
 #include "accessibility.h"
 #include <unordered_map>
 
@@ -363,40 +364,60 @@ void lookForOpenedFiles(processId pid) {
     CFRelease(application);
 }
 
-static void* lookForOpenedFilesThread(void*) {
-    // Some explanations here:
-    // On macOS, a window can be "linked" to a file and this information can be accessed through the Accessibility API
-    // While not all application support it, this has the advantage of not requiring root permissions and also allows us to scan for files opened *before* Chameleon was started.
-    // So this method can work in addition to dtrace, or as an alternative for those not wanting to enable dtrace/give root permission.
-    // Now, AFAIK, the Accessibility API is the only way to get the document linked to a window.
-    // This part is implemented in lookForOpenedFiles(pid) which will use the Accessibility API to scan a process, find windows and find the documents.
-    // However, I noticed that lookForOpenedFiles(pid) can be extremely expensive, especially on newer versions of MacOS in which accessibility requests can be quite slow
-    // So my first naive implementation enumerating all processes (using GetNextProcess) and then calling lookForOpenedFiles(pid) on all of them was extremely slow.
-    // Instead, I now reduce the number of calls to lookForOpenedFiles(pid) by first filtering processes to keep only those with at least one window.
-    // I do so using CGWindowListCopyWindowInfo which returns the list of opened windows, and then get the process id that the window belongs to
-    // Still a little costly, but I am not aware of any faster alternative
+// pidsPtr can be NULL, in which case all opened windows are scanned (slower)
+// pidsPtr is deallocated at the end
+static void* lookForOpenedFilesThread(void* pidsPtr) {
+    QSet<processId>* pids = (QSet<processId>*) pidsPtr;
+    if (pidsPtr == NULL) {
+        // Some explanations here:
+        // On macOS, a window can be "linked" to a file and this information can be accessed through the Accessibility API
+        // While not all application support it, this has the advantage of not requiring root permissions and also allows us to scan for files opened *before* Chameleon was started.
+        // So this method can work in addition to dtrace, or as an alternative for those not wanting to enable dtrace/give root permission.
+        // Now, AFAIK, the Accessibility API is the only way to get the document linked to a window.
+        // This part is implemented in lookForOpenedFiles(pid) which will use the Accessibility API to scan a process, find windows and find the documents.
+        // However, I noticed that lookForOpenedFiles(pid) can be extremely expensive, especially on newer versions of MacOS in which accessibility requests can be quite slow
+        // So my first naive implementation enumerating all processes (using GetNextProcess) and then calling lookForOpenedFiles(pid) on all of them was extremely slow.
+        // Instead, I now reduce the number of calls to lookForOpenedFiles(pid) by first filtering processes to keep only those with at least one window.
+        // I do so using CGWindowListCopyWindowInfo which returns the list of opened windows, and then get the process id that the window belongs to
+        // Still a little costly, but I am not aware of any faster alternative
+        NSArray *windows = (NSArray *)CGWindowListCopyWindowInfo(kCGWindowListOptionAll | kCGWindowListExcludeDesktopElements, kCGNullWindowID);
+        // We store pids in a set to avoid duplicates
+        pids = new QSet<processId>;
 
-    NSArray *windows = (NSArray *)CGWindowListCopyWindowInfo(kCGWindowListOptionAll | kCGWindowListExcludeDesktopElements, kCGNullWindowID);
-    // We store pids in a set to avoid duplicates
-    std::set<pid_t> pids;
-
-    for (NSDictionary *cocoaWindow in windows) {
-        pid_t windowPid = [[cocoaWindow objectForKey:(id)kCGWindowOwnerPID] integerValue];
-        pids.insert(windowPid);
+        for (NSDictionary *cocoaWindow in windows) {
+            pid_t windowPid = [[cocoaWindow objectForKey:(id)kCGWindowOwnerPID] integerValue];
+            windowId wid = [[cocoaWindow objectForKey:(id)kCGWindowNumber] integerValue];
+            windowScrollAreasMutex.lock();
+            // Only add new windows
+            if (!windowScrollAreas.contains(wid)) {
+                pids->insert(windowPid);
+            }
+            windowScrollAreasMutex.unlock();
+        }
+        CFRelease(windows);
     }
 
-    for (auto pid : pids) {
+    for (auto pid : *pids) {
         lookForOpenedFiles(pid);
     }
 
-    CFRelease(windows);
+    delete pids;
 
     return NULL;
 }
 
-void lookForOpenedFiles() {
+void startLookingForOpenedFilesThread(QSet<processId>* pidsPtr) {
     pthread_t output_thread;
-    pthread_create(&output_thread, NULL, lookForOpenedFilesThread, (void*) NULL);
+    pthread_create(&output_thread, NULL, lookForOpenedFilesThread, (void*) pidsPtr);
+}
+
+void accessibilityLookForOpenedFiles(QSet<processId> pids) {
+    // Alloc a copy so that we can pass it to the thread
+    startLookingForOpenedFilesThread(new QSet<processId>(pids));
+}
+
+void lookForOpenedFiles() {
+    startLookingForOpenedFilesThread(NULL);
 }
 
 bool requestAccessibilityPermission() {

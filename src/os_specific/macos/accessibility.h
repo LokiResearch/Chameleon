@@ -18,8 +18,10 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #ifndef ACCESSIBILITY_H
 #define ACCESSIBILITY_H
 
+#include <QSet>
 #include "../window.h"
 
 void accessibilityDestroyWindow(windowId wid);
+void accessibilityLookForOpenedFiles(QSet<processId> pids);
 
 #endif // ACCESSIBILITY_H

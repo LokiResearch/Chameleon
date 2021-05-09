@@ -20,6 +20,7 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #include <QDebug>
 #include <iostream>
 #include <pthread.h>
+#include <QSet>
 #include "accessibility.h"
 #include <AppKit/AppKit.h>
 #import <Cocoa/Cocoa.h>
@@ -155,6 +156,7 @@ void updateOpenedWindows() {
 
     NSArray *windows = (NSArray *)CGWindowListCopyWindowInfo(kCGWindowListOptionAll | kCGWindowListExcludeDesktopElements, kCGNullWindowID);
 
+    QSet<processId> processesWithNewWindows;
     QSet<windowId> closedWindows(openedWindows);
     openedWindows.clear();
     bool foundFocused = false;
@@ -180,10 +182,17 @@ void updateOpenedWindows() {
         onWindowUpdated(windowNumber, windowPid, windowBounds.origin.x, windowBounds.origin.y, windowBounds.size.width, windowBounds.size.height, isOnScreen, windowTitle, isFrontMost);
 
         openedWindows.insert(windowNumber);
+        if (!closedWindows.contains(windowNumber)) {
+            processesWithNewWindows.insert(windowPid);
+        }
         closedWindows.remove(windowNumber);
     }
 
     CFRelease(windows);
+
+    if (!processesWithNewWindows.isEmpty()) {
+        accessibilityLookForOpenedFiles(processesWithNewWindows);
+    }
 
     for (auto windowNumber : closedWindows) {
         onWindowDestroyed(windowNumber);
