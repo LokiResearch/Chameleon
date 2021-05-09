@@ -113,6 +113,7 @@ void ObservedWindowsManager::onWindowUpdated(windowId wid, processId pid, int x,
             break;
         }
      }
+    observedWindowsMutex.unlock();
 
     if (wnd == NULL) {
         // New window
@@ -122,7 +123,9 @@ void ObservedWindowsManager::onWindowUpdated(windowId wid, processId pid, int x,
             addFigureToWindow(wnd, figure);
         }
         figuresByProcessMutex.unlock();
+        observedWindowsMutex.lock();
         observedWindows.append(wnd);
+        observedWindowsMutex.unlock();
     }
 
     wnd->setX(x);
@@ -132,8 +135,6 @@ void ObservedWindowsManager::onWindowUpdated(windowId wid, processId pid, int x,
     wnd->setOnScreen(isOnScreen);
     wnd->setTitle(title);
     wnd->setFrontMost(isFrontMost);
-
-    observedWindowsMutex.unlock();
 }
 
 void ObservedWindowsManager::onWindowScrolled(windowId wid, int x, int y, int width, int height, double horizontalPos, double verticalPos) {

@@ -178,7 +178,6 @@ void updateOpenedWindows() {
         CGRectMakeWithDictionaryRepresentation((CFDictionaryRef) [cocoaWindow objectForKey:(id)kCGWindowBounds], &windowBounds);
 
         onWindowUpdated(windowNumber, windowPid, windowBounds.origin.x, windowBounds.origin.y, windowBounds.size.width, windowBounds.size.height, isOnScreen, windowTitle, isFrontMost);
-        accessibilityUpdateWindow(windowNumber, windowPid);
 
         openedWindows.insert(windowNumber);
         closedWindows.remove(windowNumber);
@@ -285,14 +284,13 @@ bool isWindowPartHidden(windowId wid,int x, int y, int width, int height) {
     return res;
 }
 
-
 // Callback receiving all the system's events
 CGEventRef eventsCallback(__unused CGEventTapProxy proxy,
                              CGEventType type,
                              CGEventRef event,
                              __unused void *refcon)
 {
-    if (type == (CGEventType) -2 || type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
+    if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
         // The event tap has been disabled by the system, we have to reactivate it
         NSLog(@"event tap has been disabled %i", type);
         CGEventTapEnable(eventTap, true);
@@ -308,15 +306,6 @@ CGEventRef eventsCallback(__unused CGEventTapProxy proxy,
     if (nsType == NSMouseMoved) {
         CGPoint pt = CGEventGetLocation(event);
         onMouseMoved((int) pt.x, (int) pt.y);
-    }
-
-    if (nsType == NSEventTypeScrollWheel || nsType == NSEventTypeMouseEntered) {
-        onDocumentScrolled();
-    }
-
-    // To handle scroll by clicking on the scrollbar. We do not want it to be called if we are interacting with one of our own window
-    if (nsType == NSEventTypeLeftMouseDragged && ![nsEvent window]) {
-        onDocumentScrolled();
     }
 
     // send event to the next application

@@ -20,9 +20,6 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 
 #include "../window.h"
 
-void accessibilityUpdateWindow(processId pid, windowId wid);
 void accessibilityDestroyWindow(windowId wid);
-
-void onDocumentScrolled();
 
 #endif // ACCESSIBILITY_H

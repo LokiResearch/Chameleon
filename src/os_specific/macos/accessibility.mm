@@ -23,6 +23,7 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #include <iostream>
 #include <set>
 #include "accessibility.h"
+#include <unordered_map>
 
 extern "C" AXError _AXUIElementGetWindow(AXUIElementRef, CGWindowID* out);
 
@@ -36,6 +37,7 @@ typedef struct _scrollArea {
 
 QHash<windowId, QList<scrollArea*>> windowScrollAreas;
 QMutex windowScrollAreasMutex;
+std::unordered_map<processId, AXObserverRef*> observers;
 
 // Return true if the role name of *element* is *role*
 bool isElementKindOf(AXUIElementRef element, CFStringRef role) {
@@ -228,12 +230,67 @@ bool getScrollbarPositions(AXUIElementRef scrollArea, double* horizontalPos, dou
     return true;
 }
 
+static void notificationCallback(AXObserverRef observer, AXUIElementRef element, CFStringRef notification, void *refcon) {
+    scrollArea* sArea = (scrollArea*) refcon;
+
+    double horizontalPos;
+    double verticalPos;
+    if (getScrollbarPositions(sArea->element, &horizontalPos, &verticalPos)) {
+        CGSize size;
+        CGPoint point;
+        getElementBounds(sArea->element, &size, &point);
+
+        if (horizontalPos != sArea->horizontalPos || verticalPos != sArea->verticalPos ||
+                sArea->x != point.x || sArea->y != point.y) {
+            sArea->horizontalPos = horizontalPos;
+            sArea->verticalPos = verticalPos;
+            sArea->x = point.x;
+            sArea->y = point.y;
+            CGWindowID wid;
+            _AXUIElementGetWindow(element, &wid);
+            onWindowScrolled(wid, point.x, point.y, size.width, size.height, horizontalPos, verticalPos);
+        }
+    }
+}
+
+void installNotificationsScrollArea(processId pid, scrollArea* sArea) {
+    if (observers.find(pid) == observers.end()) {
+         AXObserverRef* observer = new AXObserverRef;
+         if (AXObserverCreate(pid, notificationCallback, observer) == kAXErrorSuccess) {
+             CFRunLoopAddSource(CFRunLoopGetCurrent(), AXObserverGetRunLoopSource(*observer), kCFRunLoopCommonModes);
+             observers[pid] = observer;
+         } else {
+             return;
+         }
+     }
+
+    AXUIElementRef verticalScrollbar = (AXUIElementRef) getAttributeValue(sArea->element, kAXVerticalScrollBarAttribute);
+    AXUIElementRef horizontalScrollbar = (AXUIElementRef) getAttributeValue(sArea->element, kAXHorizontalScrollBarAttribute);
+    AXUIElementRef window = (AXUIElementRef) getAttributeValue(sArea->element, kAXWindowAttribute);
+
+    if (verticalScrollbar != NULL) {
+        AXObserverAddNotification(*observers[pid], verticalScrollbar, kAXValueChangedNotification, sArea);
+        CFRelease(verticalScrollbar);
+    }
+
+    if (horizontalScrollbar != NULL) {
+        AXObserverAddNotification(*observers[pid], horizontalScrollbar, kAXValueChangedNotification, sArea);
+        CFRelease(horizontalScrollbar);
+    }
+
+    if (window != NULL) {
+        AXObserverAddNotification(*observers[pid], window, kAXWindowMovedNotification, sArea);
+        CFRelease(window);
+    }
+}
 
 
-bool registerScrollCallback(processId pid, windowId wid) {
+bool registerScrollCallback(processId pid, AXUIElementRef windowElement) {
     windowScrollAreasMutex.lock();
-    if (!windowScrollAreas.contains(wid)) {
-        AXUIElementRef windowElement = getAXUIElementFromWindow(pid, wid);
+    CGWindowID wndId;
+    _AXUIElementGetWindow(windowElement, &wndId);
+
+    if (!windowScrollAreas.contains(wndId)) {
         if (windowElement == NULL) {
             windowScrollAreasMutex.unlock();
             return false;
@@ -248,12 +305,30 @@ bool registerScrollCallback(processId pid, windowId wid) {
             sArea->element = element;
             getScrollbarPositions(element, &sArea->horizontalPos, &sArea->verticalPos);
             scrollAreas.append(sArea);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                installNotificationsScrollArea(pid, sArea);
+            });
         }
 
-        windowScrollAreas[wid] = scrollAreas;
+        windowScrollAreas[wndId] = scrollAreas;
     }
 
     windowScrollAreasMutex.unlock();
+
+    return true;
+}
+
+bool registerScrollCallback(processId pid, windowId wid) {
+    windowScrollAreasMutex.lock();
+    bool containsWid = windowScrollAreas.contains(wid);
+    windowScrollAreasMutex.unlock();
+
+    // Most of the time, the wid will be already known because lookForOpenedFiles is called on regular basis
+    // But just in case, we also allow the registering of the scroll callback here
+    if (!containsWid) {
+        AXUIElementRef windowElement = getAXUIElementFromWindow(pid, wid);
+        registerScrollCallback(pid, windowElement);
+    }
 
     return true;
 }
@@ -265,10 +340,10 @@ for (int i = 0; i < count; ++i) { \
     CODE \
 } \
 
-
 void lookForOpenedFiles(processId pid) {
     // AFAIK the only way to get the opened file from a window is through the accessibility API.
     AXUIElementRef application = AXUIElementCreateApplication(pid);
+
     CFArrayRef windows;
     AXUIElementCopyAttributeValue(application, kAXWindowsAttribute, (CFTypeRef*) &windows);
 
@@ -278,9 +353,11 @@ void lookForOpenedFiles(processId pid) {
             if (!document.empty()) {
                 onFileOpened(document.c_str(), pid);
             }
+            // Find all the scrollbars and install notifications
+            registerScrollCallback(pid, window);
          });
 
-        CFRelease(windows);
+        //CFRelease(windows);
     }
 
     CFRelease(application);
@@ -320,34 +397,6 @@ static void* lookForOpenedFilesThread(void*) {
 void lookForOpenedFiles() {
     pthread_t output_thread;
     pthread_create(&output_thread, NULL, lookForOpenedFilesThread, (void*) NULL);
-}
-
-void onDocumentScrolled() {
-    windowScrollAreasMutex.lock();
-    QHash<windowId, QList<scrollArea*>>::iterator i;
-
-    for (i = windowScrollAreas.begin(); i != windowScrollAreas.end(); ++i) {
-        for (auto sArea : i.value()) {
-            double horizontalPos;
-            double verticalPos;
-            if (getScrollbarPositions(sArea->element, &horizontalPos, &verticalPos)) {
-                CGSize size;
-                CGPoint point;
-                getElementBounds(sArea->element, &size, &point);
-
-                if (horizontalPos != sArea->horizontalPos || verticalPos != sArea->verticalPos ||
-                        sArea->x != point.x || sArea->y != point.y) {
-                    sArea->horizontalPos = horizontalPos;
-                    sArea->verticalPos = verticalPos;
-                    sArea->x = point.x;
-                    sArea->y = point.y;
-
-                    onWindowScrolled(i.key(), point.x, point.y, size.width, size.height, horizontalPos, verticalPos);
-                }
-            }
-        }
-    }
-    windowScrollAreasMutex.unlock();
 }
 
 bool requestAccessibilityPermission() {
