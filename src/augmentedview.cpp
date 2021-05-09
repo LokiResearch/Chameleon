@@ -87,6 +87,8 @@ void AugmentedView::moveInsideRect(QRect rect, double x, double y) {
     int newX = qMin(qMax(roundedX, rect.x()), maxX);
     int newY = qMin(qMax(roundedY, rect.y()), maxY);
 
+    QMainWindow::move(newX, newY);
+
     int viewx = roundedX - newX;
     int viewy = roundedY - newY;
     webEngineView->move(viewx, viewy);
@@ -99,9 +101,9 @@ void AugmentedView::moveInsideRect(QRect rect, double x, double y) {
     isVisible &= !(qAbs(roundedX - newX) >= webEngineView->width() || qAbs(roundedY - newY) >= webEngineView->height()); // Hide if outside of the window bounds
     this->setVisible(isVisible && found);
 
-    QMainWindow::move(newX, newY);
-
-    repaint();
+    if (isVisible && found) {
+        repaint();
+    }
 }
 
 void AugmentedView::moveInsideWindow(double x, double y) {
@@ -136,13 +138,13 @@ void AugmentedView::onFloatingWindowPressed() {
 }
 
 void AugmentedView::onFigureFound(QRect rect) {
-    moveInsideWindow(rect.x(), rect.y());
-
+    virtualWidth = rect.width();
+    virtualHeight = rect.height();
     webViewContainer->setFixedSize(rect.width(), rect.height());
     webEngineView->setFixedSize(rect.width(), rect.height());
     this->setFixedSize(rect.width(), rect.height());
-    virtualWidth = rect.width();
-    virtualHeight = rect.height();
+
+    moveInsideWindow(rect.x(), rect.y());
 
     if (!this->found) {
         showNormal();
