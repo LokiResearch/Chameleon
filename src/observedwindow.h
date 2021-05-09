@@ -55,6 +55,7 @@ public:
     inline qint64 getMSecsSinceScroll() {return QDateTime::currentMSecsSinceEpoch() - lastScrollTime;}
     inline double getHScrollPos() {return lastHorizontalScrollPos;}
     inline double getVScrollPos() {return lastVerticalScrollPos;}
+    inline QRect getScrollRect() {return lastScrollRect;}
 
     inline void setX(int newX) {if (x != newX) hasMoved = true; x = newX;}
     inline void setY(int newY) {if (y != newY) hasMoved = true; y = newY;}
@@ -73,8 +74,7 @@ private:
     double hasScrollPos;
     double lastVerticalScrollPos;
     double lastHorizontalScrollPos;
-    double lastCanvasX;
-    double lastCanvasY;
+    QRect lastScrollRect;
     qint64 lastScrollTime;
 
     QList<AugmentedView*> augmentedViews;

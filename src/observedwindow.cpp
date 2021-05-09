@@ -55,8 +55,8 @@ void ObservedWindow::onWindowScrolled(QRect scrollRect, double horizontalPos, do
     if (hasScrollPos) {
         double scrollDeltaX = horizontalPos - lastHorizontalScrollPos;
         double scrollDeltaY = verticalPos - lastVerticalScrollPos;
-        double canvasDeltaX = scrollRect.x() - lastCanvasX;
-        double canvasDeltaY = scrollRect.y() - lastCanvasY;
+        double canvasDeltaX = scrollRect.x() - lastScrollRect.x();
+        double canvasDeltaY = scrollRect.y() - lastScrollRect.y();
         double deltaX = scrollDeltaX - canvasDeltaX;
         double deltaY = scrollDeltaY - canvasDeltaY;
 
@@ -69,8 +69,7 @@ void ObservedWindow::onWindowScrolled(QRect scrollRect, double horizontalPos, do
 
     lastHorizontalScrollPos = horizontalPos;
     lastVerticalScrollPos = verticalPos;
-    lastCanvasX = scrollRect.x();
-    lastCanvasY = scrollRect.y();
+    lastScrollRect = scrollRect;
     hasScrollPos = true;
     lastScrollTime = QDateTime::currentMSecsSinceEpoch();
     augmentedViewsMutex.unlock();

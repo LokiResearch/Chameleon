@@ -76,6 +76,7 @@ void FigureFinderTask::run() {
     cv::Mat scene = observedWindow->getScreenshot(&hasChanged);
     double hScrollPos = observedWindow->getHScrollPos();
     double vScrollPos = observedWindow->getVScrollPos();
+    QRect initialRect = observedWindow->getScrollRect();
 
     if (!hasChanged && !observedWindow->wasVisible()) {
         observedWindow->getAugmentedViewsMutex().lock();
@@ -88,10 +89,10 @@ void FigureFinderTask::run() {
     } else if (!scene.empty()) {
         std::vector<KeyPoint> sceneKeypoints = featureMatchingAlgorithm->detect(scene);
         Mat sceneDescriptors = featureMatchingAlgorithm->compute(scene, sceneKeypoints);
-        // By the time we reach this line (e.g. after the analysis)  the document might have been scrolled making the results outdated
-        // We detect this by comparing the current scroll position to the scroll position when we took the screenshot
+        // By the time we reach this line (e.g. after the analysis)  the document might have been modified (e.g. resized, moved, or scrolled) making the results outdated
+        // We detect this by comparing the current scroll position/geometry to the scroll position/geometry when we took the screenshot
         // If these are different, we just discard the results of the pixel analysis
-        if (qAbs(hScrollPos - observedWindow->getHScrollPos()) < 0.1 && qAbs(vScrollPos - observedWindow->getVScrollPos()) < 0.1) {
+        if (qAbs(hScrollPos - observedWindow->getHScrollPos()) < 0.1 && qAbs(vScrollPos - observedWindow->getVScrollPos()) < 0.1 && observedWindow->getScrollRect() == initialRect) {
             observedWindow->getAugmentedViewsMutex().lock();
             for (auto augmentedView : observedWindow->getAugmentedViews()) {
                 cv::Rect figureRect;
