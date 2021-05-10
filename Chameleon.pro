@@ -24,6 +24,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
+    src/demodialog.cpp \
         src/main.cpp \
         src/mainwindow.cpp \
     src/observedfile.cpp \
@@ -41,6 +42,7 @@ SOURCES += \
 INCLUDEPATH += src/
 
 HEADERS += \
+    src/demodialog.h \
         src/mainwindow.h \
     src/observedfile.h \
     src/observedfilesmanager.h \
@@ -60,7 +62,8 @@ HEADERS += \
 
 FORMS += \
         forms/mainwindow.ui \
-    forms/registrationtooldialog.ui
+    forms/registrationtooldialog.ui \
+    forms/demodialog.ui
 
 
 windows {

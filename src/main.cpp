@@ -26,6 +26,7 @@ along with Chameleon.  If not, see <https://www.gnu.org/licenses/>. */
 #include <QMessageBox>
 #include <QDir>
 #include <QStandardPaths>
+#include "demodialog.h"
 
 Database* database;
 ObservedWindowsManager* windowManager;
@@ -83,6 +84,8 @@ void customMessageOutput(QtMsgType type, const QMessageLogContext &context, cons
             fprintf(output, "[%d] Critical: %s (%s:%u, %s)\n", timestamp, localMsg.constData(), context.file, context.line, context.function);
             break;
         case QtFatalMsg:
+            // Inform user too
+            QMessageBox::critical(NULL, "Fatal error", QString::fromStdString(localMsg.toStdString()));
             fprintf(output, "[%d] Fatal: %s (%s:%u, %s)\n", timestamp, localMsg.constData(), context.file, context.line, context.function);
             abort();
         }
@@ -107,9 +110,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    initialize();
     qDebug() << "Load database";
     database = new Database();
+
+    if (!QFile::exists(database->getUrl().toString())) {
+        // First time Chameleon has been started, show demo
+        DemoDialog demo(database);
+        demo.exec();
+    } else {
+        database->load();
+    }
+
+    initialize();
     windowManager = new ObservedWindowsManager;
     filesManager = new ObservedFilesManager(database);
     MainWindow w(database, windowManager, filesManager);

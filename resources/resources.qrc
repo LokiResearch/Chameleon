@@ -1,5 +1,8 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
     <file>images/icon.png</file>
+    <file>demo/paper.pdf</file>
+    <file>demo/figures.db</file>
+    <file>demo/bubble.html</file>
 </qresource>
 </RCC>

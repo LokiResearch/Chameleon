@@ -30,6 +30,7 @@ class Database
 {
 public:
     Database();
+    void load();
     void saveFigureInDb(cv::Mat image, ObservedFile& file, QUrl url);
     void deleteFigure(int id);
 
@@ -37,9 +38,11 @@ public:
     QList<QPair<int, QString>> getFigureList();
     bool getFigureDetails(int figureId, int* width, int* height, int* fileSize, QString* md5);
     void updateMD5(QString oldMD5, QString newMD5, qint64 newSize);
+    void updateFigureUrl(QString oldUrl, QString newUrl);
     inline QUrl getUrl() {return url;}
 
 private:
+    QMutex databaseAccess;
     QSqlDatabase db;
     QList<Figure*> figures;
     QUrl url;

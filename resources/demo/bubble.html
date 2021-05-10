@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+   <body>
+<style>
+body, html {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding:0;
+}
+body {
+    overflow:hidden
+}
+
+#my_Canvas {
+    position:fixed;
+    left:0;
+    top:0;
+}
+
+
+</style>
+
+      <canvas width = "100" height = "100" id = "my_Canvas"></canvas>
+
+      <script>
+      	var m_w = 123456789;
+		var m_z = 987654321;
+		var mask = 0xffffffff;
+
+		// Takes any integer
+		function seed(i) {
+		    m_w = i;
+		    m_z = 987654321;
+		}
+
+		// Returns number between 0 (inclusive) and 1.0 (exclusive),
+		// just like Math.random().
+		function random() {
+		    m_z = (36969 * (m_z & 65535) + (m_z >> 16)) & mask;
+		    m_w = (18000 * (m_w & 65535) + (m_w >> 16)) & mask;
+		    var result = ((m_z << 16) + m_w) & mask;
+		    result /= 4294967296;
+		    return result + 0.5;
+		}
+
+
+        var canvas = document.getElementById('my_Canvas');
+        var width = canvas.width;
+		var height = canvas.height;
+		var mouseX = -1;
+		var mouseY = -1;
+		targets = [];
+
+		window.onload = window.onresize = function() {
+		    canvas = document.getElementById('my_Canvas');
+		    canvas.width = window.innerWidth;
+		    canvas.height = window.innerHeight;
+		    width = canvas.width;
+		    height = canvas.height;
+		    seed(12344);
+		    generateTargets(50);
+		    draw();
+		}
+
+		window.onmousemove = function(event) {
+			mouseX = event.pageX;
+			mouseY = event.pageY; 
+			draw();
+		}
+
+		window.onmouseout = function() {
+	        mouseY = mouseX = -1;
+	        draw();
+	    }
+
+		function getDist(xa, ya, xb, yb) {
+			dx = xa - xb;
+			dy = ya - yb;
+			return Math.sqrt(dx * dx + dy * dy);
+		}
+
+		function getClosestTarget(x, y) {
+			closestTarget = targets[0];
+			minDist = getDist(closestTarget.x, closestTarget.y, x, y);
+
+			for (i = 0; i < targets.length; ++i) {
+				target = targets[i];
+				dist = getDist(target.x, target.y, x, y);
+
+				if (dist < minDist) {
+					minDist = dist;
+					closestTarget = target;
+				}
+			}
+
+			return closestTarget;
+		}
+
+		function generateTargets(nbTargets) {
+			targets = [];
+			var radiusMin = 5;
+			var radiusMax = 25;
+
+			for (i = 0; i < nbTargets; ++i) {
+				x = Math.round(random() * width);
+				y = Math.round(random() * height);
+				radius = Math.round(radiusMin + random() * (radiusMax - radiusMin));
+				targets.push({x: x, y: y, radius: radius}); 
+			}
+		}
+
+		function draw() {
+			var ctx = canvas.getContext("2d");
+			ctx.clearRect(0, 0, width, height);
+
+			closestTarget = null;
+
+			// Bubble cursor
+			if (mouseX >= 0 && mouseY >= 0) {
+				closestTarget = getClosestTarget(mouseX, mouseY);
+				radius = getDist(mouseX, mouseY, closestTarget.x, closestTarget.y) + closestTarget.radius;
+				ctx.beginPath();
+				ctx.fillStyle = "#0000FF";
+				ctx.arc(mouseX, mouseY, radius, 0, Math.PI*2, false);
+				ctx.fill();
+			}
+
+			// Targets
+			for (i = 0; i < targets.length; ++i) {
+				target = targets[i];
+
+				ctx.beginPath();
+				ctx.fillStyle = target == closestTarget ? "#FF0000" : "#00FF00";
+				ctx.arc(target.x, target.y, target.radius, 0, Math.PI*2, false);
+				ctx.fill();
+			}
+		}
+
+		draw();
+		
+
+				
+      </script>
+		
+   </body>
+</html> 
