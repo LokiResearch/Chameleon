@@ -112,3 +112,6 @@ LIBS += -lopencv_core \
 
 RESOURCES += \
     resources/resources.qrc
+
+
+ICON = resources/AppIcon.icns
