@@ -30,9 +30,10 @@ void DemoDialog::on_openDocumentButton_clicked() {
     QUrl bubbleUrl = QUrl(dir.filePath("bubble.html"));
     QUrl dbUrl = db->getUrl();
 
-    Q_ASSERT_X(QFile::copy(":/demo/paper.pdf", paperUrl.toString()), "File copy", "Could not copy paper.pdf");
-    Q_ASSERT_X(QFile::copy(":/demo/bubble.html", bubbleUrl.toString()), "File copy", "Could not copy bubble.html");
-    Q_ASSERT_X(QFile::copy(":/demo/figures.db", dbUrl.toString()), "File copy", "Could not copy figures.db");
+    QFile::copy(":/demo/paper.pdf", paperUrl.toString());
+    QFile::copy(":/demo/bubble.html", bubbleUrl.toString());
+    QFile::copy(":/demo/figures.db", dbUrl.toString());
+
     QFile::setPermissions(dbUrl.toString(), QFileDevice::ReadOwner|QFileDevice::WriteOwner);
 
     db->load();

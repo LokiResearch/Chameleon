@@ -40,6 +40,7 @@ using namespace cv;
 Database::Database() {
     db = QSqlDatabase::addDatabase("QSQLITE");
     QString dbLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dbLocation);
     url = QUrl(dbLocation + "/figures.db");
 }
 
